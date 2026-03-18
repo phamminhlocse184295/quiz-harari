@@ -1,0 +1,12 @@
+{
+  "name": "Harari Quiz — 21 Bài Học",
+  "short_name": "Harari Quiz",
+  "description": "Khám phá bài học từ sách của Yuval Noah Harari qua 7 câu hỏi.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "lang": "vi"
+}

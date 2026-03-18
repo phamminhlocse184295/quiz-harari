@@ -3,29 +3,75 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Harari Quiz - 21 Bài Học</title>
-    <!-- Font & Thư viện chụp ảnh -->
+    <title>Harari Quiz — Bạn sẽ là ai trong thế kỷ 21?</title>
+    <meta name="description" content="7 câu hỏi dựa trên sách 21 Bài Học Cho Thế Kỷ 21 của Harari. Khám phá bài học phù hợp nhất với bạn." />
+    <meta name="theme-color" content="#0f0e0c" />
+    <!-- Open Graph -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:title"       content="Bạn sẽ là ai trong thế kỷ 21?" />
+    <meta property="og:description" content="Quiz 7 câu · Dựa trên sách Harari · Khám phá bài học dành riêng cho bạn." />
+    <meta property="og:url"         content="https://quiz-harari.web.app" />
+    <link rel="manifest" href="/manifest.json?v=20260316-3" />
+    <!-- Fonts: Lora (body) + Playfair Display (heading) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-    <!-- Link CSS -->
-    <link rel="stylesheet" href="style.css" />
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css?v=20260316-3" />
   </head>
   <body>
     <div class="app-container">
       <!-- Màn hình Intro -->
       <div id="screen-intro" class="screen active">
-        <h1>Bạn sẽ là ai trong tương lai?</h1>
-        <p>Dựa trên 21 Bài Học Cho Thế Kỷ 21 — Yuval Noah Harari</p>
-        <button class="btn" id="start-btn">Bắt đầu ngay →</button>
+        <!-- Resume banner (hiện khi có state dở) -->
+        <div id="resume-banner" style="display:none;" class="resume-banner">
+          <span>Bạn đang làm dở. Tiếp tục?</span>
+          <div>
+            <button id="resume-btn" class="resume-yes">Tiếp tục</button>
+            <button id="resume-dismiss" class="resume-no">Làm mới</button>
+          </div>
+        </div>
+
+        <span class="badge">MLN122 · Harari Quiz</span>
+        <h1>Bạn sẽ là ai trong thế kỷ 21?</h1>
+        <p>Dựa trên <em>21 Bài Học Cho Thế Kỷ 21</em> của Yuval Noah Harari.<br/>7 câu hỏi · ~3 phút.</p>
+
+        <!-- Play counter -->
+        <p id="play-counter" style="display:none;" class="play-counter"></p>
+
+        <div class="keyword-chips">
+          <span class="chip">AI &amp; Việc làm</span>
+          <span class="chip">Dữ liệu &amp; Giám sát</span>
+          <span class="chip">Toàn cầu hoá</span>
+          <span class="chip">Tư duy phê phán</span>
+          <span class="chip">Tin giả</span>
+        </div>
+
+        <hr class="divider" />
+
+        <form id="intro-form" onsubmit="event.preventDefault(); if (window.startQuiz) window.startQuiz(event); return false;">
+          <label class="input-label">Tên của bạn (tùy chọn)</label>
+          <input
+            type="text"
+            id="name-input"
+            class="input-field"
+            placeholder="Nhập tên để hiện trên kết quả..."
+            maxlength="40"
+            autocomplete="off"
+          />
+          <button type="submit" class="btn" id="start-btn">Bắt đầu →</button>
+        </form>
+        <!-- Quick-start: skip tên, vào quiz ngay cho BGK xem -->
+        <button class="btn btn-quick" id="quickstart-btn">Bắt đầu nhanh (không cần tên)</button>
       </div>
 
       <!-- Màn hình Quiz -->
       <div id="screen-quiz" class="screen">
-        <div class="progress-text" id="progress-text">Câu 1/5</div>
+        <button class="btn-back" id="back-btn" style="display:none;">← Câu trước</button>
+        <div class="progress-text" id="progress-text">Câu 1/7</div>
         <div class="progress-container">
           <div class="progress-bar" id="progress-bar"></div>
         </div>
@@ -33,58 +79,55 @@
         <div id="options-container"></div>
       </div>
 
-      <!-- Màn hình Loading (MỚI THÊM) -->
+      <!-- Màn hình Loading -->
       <div id="screen-loading" class="screen">
-        <div class="loading-dots">
-          <span class="dot">•</span><span class="dot">•</span
-          ><span class="dot">•</span>
+        <div class="loading-container">
+          <span class="loading-symbol">✦</span>
+          <h2>Đang phân tích...</h2>
+          <div class="loading-bar-wrapper">
+            <div class="loading-bar-fill" id="loading-bar-fill"></div>
+          </div>
+          <p class="loading-status" id="loading-status">Đang đọc câu trả lời...</p>
+          <!-- Harari quote hiện từng bước -->
+          <p class="loading-quote" id="loading-quote"></p>
         </div>
-        <h2 style="color: var(--accent-gold)">Đang phân tích...</h2>
-        <p>Hệ thống đang tìm bài học phù hợp nhất với bạn</p>
       </div>
 
-      <!-- Màn hình Kết quả (ĐÃ CẬP NHẬT) -->
+      <!-- Màn hình Kết quả -->
       <div id="screen-result" class="screen">
         <div id="result-card">
-          <div class="emoji-large" id="res-emoji"></div>
+          <p class="result-name" id="res-name"></p>
+          <div class="lesson-icon" id="res-emoji"></div>
           <h2 id="res-title"></h2>
           <p id="res-desc"></p>
-          <div
-            class="quote"
-            id="res-quote"
-            style="
-              font-style: italic;
-              color: var(--accent-gold);
-              margin: 15px 0;
-            "
-          ></div>
-          <p
-            id="res-advice"
-            style="font-weight: bold; margin-top: 15px; color: #fff"
-          ></p>
+          <hr class="result-divider" />
+          <span class="quote-mark">❝</span>
+          <p class="quote" id="res-quote"></p>
+          <p id="res-advice"></p>
+          <p class="share-watermark" id="share-watermark">quiz-harari.web.app</p>
         </div>
-
-        <!-- Các nút CTA mới -->
-        <button class="btn" id="share-btn">🔗 Chia sẻ kết quả</button>
-        <button class="btn btn-outline" id="download-btn">
-          📸 Tải Ảnh Kết Quả
-        </button>
-        <button
-          class="btn btn-outline"
-          onclick="location.reload()"
-          style="border: none; text-decoration: underline"
-        >
-          ↺ Làm lại từ đầu
-        </button>
+        <!-- Related lessons -->
+        <div id="related-lessons" style="display:none;"></div>
+        <button class="btn" id="share-btn">Chia sẻ kết quả</button>
+        <button class="btn btn-outline" id="download-btn">Tải ảnh kết quả</button>
+        <button class="btn btn-ghost" onclick="location.reload()">↺ Làm lại</button>
+        <a href="/stats.html" class="stats-link">Xem thống kê →</a>
       </div>
     </div>
 
-    <!-- Nạp các file JS theo đúng thứ tự -->
-    <script src="data/questions.js"></script>
-    <script src="data/lessons.js"></script>
-    <script src="quiz.js"></script>
-    <!-- Nếu file share.js trống hoặc gây lỗi thì bạn có thể xóa tạm dòng này đi vì code share đã tích hợp trong app.js rồi -->
-    <script src="share.js"></script>
-    <script src="app.js"></script>
+    <!-- Firebase SDK (compat v10) -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-init.js?v=20260316-3"></script>
+
+    <!-- JS theo đúng thứ tự -->
+    <script src="data/questions.js?v=20260316-3"></script>
+    <script src="data/lessons.js?v=20260316-3"></script>
+    <script src="quiz.js?v=20260316-3"></script>
+    <script src="app.js?v=20260316-3"></script>
+    <script src="share.js?v=20260316-3"></script>
+    <!-- Confetti -->
+    <script src="confetti.js?v=20260316-3"></script>
   </body>
 </html>

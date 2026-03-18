@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thống kê — Harari Quiz</title>
+    <meta name="theme-color" content="#09090b" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css?v=20260313-2" />
+    <style>
+      .stats-hero {
+        text-align: center;
+        padding: 48px 0 24px;
+      }
+      .stats-hero h1 {
+        font-family: 'Inter', sans-serif;
+        font-size: 1.6rem;
+        font-weight: 600;
+        margin: 0 0 8px;
+      }
+      .stats-hero p {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin: 0;
+      }
+      .total-count {
+        font-size: 2.8rem;
+        font-weight: 700;
+        color: var(--accent);
+        line-height: 1;
+        margin-bottom: 4px;
+      }
+      .stats-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 20px;
+      }
+      .stats-card h2 {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: 0 0 20px;
+      }
+      .bar-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+        font-size: 0.85rem;
+      }
+      .bar-label {
+        min-width: 120px;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .bar-track {
+        flex: 1;
+        height: 8px;
+        background: var(--surface-hover);
+        border-radius: 99px;
+        overflow: hidden;
+      }
+      .bar-fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 99px;
+        transition: width 0.6s ease;
+      }
+      .bar-count {
+        min-width: 32px;
+        text-align: right;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .back-link {
+        display: inline-block;
+        margin-bottom: 24px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.15s;
+      }
+      .back-link:hover { color: var(--text); }
+      .loading-text {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 40px 0;
+      }
+      .empty-state {
+        text-align: center;
+        color: var(--muted);
+        padding: 32px 0;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container" style="max-width: 560px;">
+      <a href="/" class="back-link">← Quay về Quiz</a>
+
+      <div class="stats-hero">
+        <p>Tổng lượt chơi</p>
+        <div class="total-count" id="total-count">—</div>
+        <p id="last-updated" style="margin-top:6px;"></p>
+      </div>
+
+      <div class="stats-card">
+        <h2>Top kết quả phổ biến nhất</h2>
+        <div id="chart-container">
+          <div class="loading-text">Đang tải dữ liệu...</div>
+        </div>
+      </div>
+
+      <div class="stats-card">
+        <h2>Hoạt động theo giờ (hôm nay)</h2>
+        <div id="hourly-container">
+          <div class="loading-text">Đang tải dữ liệu...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-init.js?v=20260313-2"></script>
+
+    <script>
+      (async function loadStats() {
+        if (!_db) {
+          document.getElementById("chart-container").innerHTML =
+            '<div class="empty-state">Không kết nối được Firebase.</div>';
+          return;
+        }
+
+        try {
+          const snap = await _db.collection("results")
+            .orderBy("timestamp", "desc")
+            .limit(500)
+            .get();
+
+          const docs = snap.docs.map((d) => d.data());
+          const total = docs.length;
+
+          // Tổng lượt
+          document.getElementById("total-count").innerText =
+            total.toLocaleString("vi-VN");
+          document.getElementById("last-updated").innerText =
+            `Cập nhật lúc ${new Date().toLocaleTimeString("vi-VN")}`;
+
+          // ---- Top kết quả ----
+          const countMap = {};
+          docs.forEach((d) => {
+            const key = `${d.resultId}|${d.resultTitle}`;
+            countMap[key] = (countMap[key] || 0) + 1;
+          });
+
+          const sorted = Object.entries(countMap)
+            .map(([key, count]) => {
+              const [id, title] = key.split("|");
+              return { id: Number(id), title, count };
+            })
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+
+          const maxCount = sorted[0]?.count || 1;
+          const chartEl = document.getElementById("chart-container");
+
+          if (sorted.length === 0) {
+            chartEl.innerHTML = '<div class="empty-state">Chưa có dữ liệu.</div>';
+          } else {
+            chartEl.innerHTML = sorted.map((item) => `
+              <div class="bar-row">
+                <span class="bar-label" title="${item.title}">${item.id}. ${item.title}</span>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width:${(item.count / maxCount) * 100}%"></div>
+                </div>
+                <span class="bar-count">${item.count}</span>
+              </div>
+            `).join("");
+          }
+
+          // ---- Hoạt động theo giờ hôm nay ----
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const hourCounts = new Array(24).fill(0);
+          docs.forEach((d) => {
+            if (!d.timestamp) return;
+            const ts = d.timestamp.toDate ? d.timestamp.toDate() : new Date(d.timestamp.seconds * 1000);
+            if (ts >= today) {
+              hourCounts[ts.getHours()]++;
+            }
+          });
+
+          const maxHour = Math.max(...hourCounts, 1);
+          const hourlyEl = document.getElementById("hourly-container");
+          const currentHour = new Date().getHours();
+
+          const rows = hourCounts
+            .map((count, h) => ({ h, count }))
+            .filter((_, h) => h <= currentHour)
+            .reverse();
+
+          if (rows.every((r) => r.count === 0)) {
+            hourlyEl.innerHTML = '<div class="empty-state">Chưa có lượt nào hôm nay.</div>';
+          } else {
+            hourlyEl.innerHTML = rows
+              .filter((r) => r.count > 0)
+              .map((r) => `
+                <div class="bar-row">
+                  <span class="bar-label" style="min-width:52px;">${String(r.h).padStart(2, "0")}:00</span>
+                  <div class="bar-track">
+                    <div class="bar-fill" style="width:${(r.count / maxHour) * 100}%"></div>
+                  </div>
+                  <span class="bar-count">${r.count}</span>
+                </div>
+              `).join("") || '<div class="empty-state">Chưa có lượt nào hôm nay.</div>';
+          }
+        } catch (err) {
+          console.error("[Stats]", err);
+          document.getElementById("chart-container").innerHTML =
+            '<div class="empty-state">Lỗi tải dữ liệu. Hãy kiểm tra Firestore rules.</div>';
+        }
+      })();
+    </script>
+  </body>
+</html>
